@@ -4,7 +4,7 @@
 This project delivers a user-friendly map comparison tool paired with a non-technical data update system for the Economy League of Greater Philadelphia via an R Shiny app. The tool allows users to visualize and compare disparate datasets across Philadelphia metropolitan area’s neighborhoods and sub-regions. 
 
 ## How to Run
-All necessary preprocessed data files are available in the folder 4_app.  Users are able locally run the project by downloading just the contents of this folder and executing app.R.
+All necessary preprocessed data files are available in the folder `4_app`.  Users are able locally run the project by downloading just the contents of this folder and executing app.R.
 
 ## How to Update Data
 Data Processing Pipeline & Updates
