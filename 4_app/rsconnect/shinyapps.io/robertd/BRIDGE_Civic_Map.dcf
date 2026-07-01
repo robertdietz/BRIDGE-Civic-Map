@@ -1,0 +1,12 @@
+name: BRIDGE_Civic_Map
+title: BRIDGE_Civic_Map
+username: robertd
+account: robertd
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17464117
+bundleId: 12205826
+url: https://robertd.shinyapps.io/BRIDGE_Civic_Map/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
