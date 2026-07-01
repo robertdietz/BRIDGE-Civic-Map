@@ -1,12 +1,12 @@
-# BRIDGE CIVIC MAP
+# BRIDGE Civic Map
 
-## PRODUCT
+## Product
 This project delivers a user-friendly map comparison tool paired with a non-technical data update system for the Economy League of Greater Philadelphia via an R Shiny app. The tool allows users to visualize and compare disparate datasets across Philadelphia metropolitan area’s neighborhoods and sub-regions. 
 
-## HOW TO RUN
+## How to Run
 All necessary preprocessed data files are available in the folder 4_app.  Users are able locally run the project by downloading just the contents of this folder and executing app.R.
 
-## HOW TO UPDATE DATA
+## How to Update Data
 Data Processing Pipeline & Updates
 Data is preprocessed through a series of three distinct stages using a combination of automated APIs and manual data downloads.
 
@@ -24,8 +24,8 @@ Brings raw data into R environment and standardizes it. This script builds struc
 ### `4_app.R`
 Generates user interface and runs Shiny app.
 
-## ADD NEW DATA SET
+## How to Add New Data Set
 see technical documentation in the below Google Drive folder.
 
-## EXTERNAL INFO
+## External Info
 Raw data files last updated 7/1/2026 that are not accessible via an API and further project documentation are available here: https://drive.google.com/drive/folders/1AzV71T2ekzLvp3cHpuMptiT7BXj8s5n4?usp=drive_link
