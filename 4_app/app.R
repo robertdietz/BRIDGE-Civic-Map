@@ -569,15 +569,13 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
     "))
   ),
   
-  # ── Header ──────────────────────────────────────────────────────────────
+  #Row 1 ─────────────────────────────────────────────────────────────
   div(id = "app-header",
       div(style = "width: 100%; border-bottom: 1px solid #ccc;",
-          # -- Row 1: global controls ------------------------------------------
           div(style = "max-width: 1400px; margin: 0 auto;",
               div(
                 class = "input-block",
                 style = "display:flex; align-items:stretch; padding:0px 5px 0px 10px; min-height: 52px;",
-                # Map compare + sync
                 div(
                   class = "header-cell",
                   style = "flex:1 1 90px; min-width:100px; max-width:100px;",
@@ -592,7 +590,6 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
                 
                 div(style = "width: 1px; border-left: 1px solid #ccc; margin: 0 6px; align-self: stretch;"),
                 
-                # Region controls
                 div(
                   class = "header-cell",
                   style = "flex:1 1 90px; min-width:100px; max-width:100px;",
@@ -616,11 +613,9 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
                   style = "flex:2 1 270px; min-width:160px; max-width:400px;opacity: 0.4; pointer-events: none;",
                   selectInput("overlay_refine", "Region Refine", choices = c(""), width = "100%")
                 ),
-                
-                #vertical divider line
+
                 div(style = "width: 1px; border-left: 1px solid #ccc; margin: 0 6px; align-self: stretch;"),
-                
-                # Civic infrastructure controls
+
                 div(
                   class = "header-cell",
                   style = "flex:1 1 120px; min-width:120px; max-width:120px; ",
@@ -634,7 +629,7 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
                 ))
           )),
       
-      # -- Row 2: per-map variable selectors --------------------------------
+      # -- Row 2 map variable input --------------------------------
       div(
         style = "display:flex; border-bottom:1px solid #ccc;",
         
@@ -770,10 +765,17 @@ server <- function(input, output, session) {
     root        <- var_config$base_var[var_config$var == current_var]
     vars        <- subset(var_config, category == input[[cat_input]])
     vars        <- vars[!duplicated(vars$base_var), ]
-    vars        <- vars[order(vars$label), ]
-    selected    <- if (length(root) > 0 && root %in% vars$base_var) root else NULL
+    # 1. Build the choices vector first, forcing the labels to character
+    raw_choices <- setNames(vars$base_var, as.character(vars$label))
+    
+    # 2. Sort the choices vector alphabetically by its names (the labels the user sees).
+    # Using tolower() and trimws() ensures a true A-Z sort regardless of case or spaces.
+    sorted_choices <- raw_choices[order(tolower(trimws(names(raw_choices))))]
+    
+    selected    <- if (length(root) > 0 && root %in% sorted_choices) root else NULL
+    
     updateSelectInput(session, var_input,
-                      choices  = setNames(vars$base_var, vars$label),
+                      choices  = sorted_choices,
                       selected = selected)
   }
   observeEvent(input$A_category,     update_variable_choices("A"))
