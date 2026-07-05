@@ -55,7 +55,8 @@ district_levels <- c(
 )
 
 transit_categories <- factor(transit_levels, levels = transit_levels)
-# UI ----------------------------
+#______________________----
+#UI----
 ui <- fluidPage(
   theme = bs_theme(version = 3),
   
@@ -70,12 +71,12 @@ ui <- fluidPage(
       )
     )
   ),
-  # ── Styles & Scripts ──────────────────────────────────────────────────
   tags$head(
     tags$link(
       rel  = "stylesheet",
       href = "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
     ),
+##*HTML Style Tags----
     tags$style(HTML("
 /* === Base layout === */
       html, body {
@@ -340,7 +341,7 @@ ui <- fluidPage(
   }
 }
     ")),
-    
+##*HTML Script Tags---- 
     tags$script(HTML("
       /* ── Floating Label State Tracking Logic ────────────────────────── */
       function updateSelectLabels() {
@@ -569,7 +570,7 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
     "))
   ),
   
-  #Row 1 ─────────────────────────────────────────────────────────────
+##*Header Row 1----
   div(id = "app-header",
       div(style = "width: 100%; border-bottom: 1px solid #ccc;",
           div(style = "max-width: 1400px; margin: 0 auto;",
@@ -629,11 +630,10 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
                 ))
           )),
       
-      # -- Row 2 map variable input --------------------------------
+##*Header Row 2----
       div(
         style = "display:flex; border-bottom:1px solid #ccc;",
-        
-        # Map A controls
+  
         div(
           id    = "mapA-controls",
           class = "input-block",
@@ -646,7 +646,6 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
               actionLink("open_modal_a", "\u24d8", style = "font-size:32px; color:#0055FF; margin-top:2px;", title = "Variable info"))
         ),
         
-        # Map B controls
         div(
           id    = "mapB-controls",
           class = "input-block",
@@ -661,7 +660,7 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
       )
   ),
   
-  # ── Maps ────────────────────────────────────────────────────────────────
+##*Choropleths----
   div(
     style = "display:flex; margin:0; flex:1; width:100%;",
     div(id = "mapA-col",
@@ -673,25 +672,28 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
   )
 )
 
-# Server ----------------------------
+#______________________----
+#SERVER----
 server <- function(input, output, session) {
   
-  # ── throttle guard ────────────────────────────────────────────────────
+##*Throttle Guard--------------------------
+#Stops the map updates from looping rapidly back and forth between A and B when
+#syncing map position
   move_times  <- reactiveVal(numeric(0))
   sync_frozen <- reactiveVal(FALSE)
   
   check_throttle <- function() {
     now   <- as.numeric(Sys.time())
     times <- c(move_times(), now)
-    times <- times[times > now - 0.5] # Look at the last half-second window
+    times <- times[times > now - 0.5] 
     move_times(times)
     
-    if (length(times) > 3) { # If more than 3 movements register in 0.5s, freeze sync briefly
+    if (length(times) > 3) { #If more than 3 movements register in 0.5s, freeze sync briefly
       sync_frozen(TRUE)
       later::later(function() { 
         sync_frozen(FALSE)
         move_times(numeric(0)) 
-      }, delay = 0.15) # Quick cooldown period
+      }, delay = 0.15) #Cooldown befre freezing again
       return(TRUE)
     }
     return(FALSE)
@@ -699,7 +701,7 @@ server <- function(input, output, session) {
   
   sync_source <- reactiveVal("none")
   
-  # ── helpers ───────────────────────────────────────────────────────────
+##*helper functions----
   format_geo_label <- function(x) {
     x <- gsub("^geo_", "", x)
     x <- gsub("_",     " ", x)
@@ -710,7 +712,7 @@ server <- function(input, output, session) {
     session$sendCustomMessage("attachCircleHover", list(map = map_id))
   }
   
-  # ── modals ────────────────────────────────────────────────────────────
+##*Metadata Popup----
   observeEvent(input$open_modal_a, {
     info <- var_config[var_config$base_var == input$A_variable &
                          var_config$metric_type == input$A_metric_type, ]
@@ -745,7 +747,7 @@ server <- function(input, output, session) {
     ))
   })
   
-  # ── refine dropdown ───────────────────────────────────────────────────
+##*Region Input Options----
   update_refine_choices <- function() {
     req(input$region_category)
     updateSelectInput(session, "overlay_refine",
@@ -757,7 +759,7 @@ server <- function(input, output, session) {
   }
   observeEvent(input$region_category, update_refine_choices())
   
-  # ── variable dropdown ─────────────────────────────────────────────────
+##*Map User Input Options----
   update_variable_choices <- function(side) {
     cat_input   <- paste0(side, "_category")
     var_input   <- paste0(side, "_variable")
@@ -765,11 +767,8 @@ server <- function(input, output, session) {
     root        <- var_config$base_var[var_config$var == current_var]
     vars        <- subset(var_config, category == input[[cat_input]])
     vars        <- vars[!duplicated(vars$base_var), ]
-    # 1. Build the choices vector first, forcing the labels to character
-    raw_choices <- setNames(vars$base_var, as.character(vars$label))
     
-    # 2. Sort the choices vector alphabetically by its names (the labels the user sees).
-    # Using tolower() and trimws() ensures a true A-Z sort regardless of case or spaces.
+    raw_choices <- setNames(vars$base_var, as.character(vars$label))
     sorted_choices <- raw_choices[order(tolower(trimws(names(raw_choices))))]
     
     selected    <- if (length(root) > 0 && root %in% sorted_choices) root else NULL
@@ -783,7 +782,6 @@ server <- function(input, output, session) {
   observeEvent(input$A_metric_type,  update_variable_choices("A"))
   observeEvent(input$B_metric_type,  update_variable_choices("B"))
   
-  # ── metric-type dropdown ──────────────────────────────────────────────
   update_type_choices <- function(side) {
     cat_input    <- paste0(side, "_category")
     var_input    <- paste0(side, "_variable")
@@ -801,8 +799,7 @@ server <- function(input, output, session) {
   observeEvent(input$B_category,  update_type_choices("B"))
   observeEvent(input$A_variable,  update_type_choices("A"))
   observeEvent(input$B_variable,  update_type_choices("B"))
-  
-  # ── year dropdown ─────────────────────────────────────────────────────
+
   update_year_choices <- function(side) {
     var_input  <- paste0(side, "_variable")
     type_input <- paste0(side, "_metric_type")
@@ -819,20 +816,18 @@ server <- function(input, output, session) {
   observeEvent(input$B_variable,    update_year_choices("B"))
   observeEvent(input$B_metric_type, update_year_choices("B"))
   
-  # ── Overlay Drawing Engine ─────────────────────────────────────────────
+##*Update Overlays----
   redraw_overlays <- function(map_id) {
     proxy <- leafletProxy(map_id)
     
-    # 1. Reset Map Layers
     proxy %>% 
       clearGroup("REGION") %>% 
       clearGroup("INFRAS") %>% 
       removeControl("infras_legend")
     
-    # 2. Handle Civic Infrastructure Layer
+###Draw Civic Infrastructure----
     if (isTRUE(input$active_infras)) {
-      
-      # Explicit Data Filtering Strategy
+
       selected_infras <- if (input$infras_category == "Rail: All") {
         overlay_civic_infras %>% filter(str_detect(category, "^Rail:"))
       } else if (input$infras_category == "Schools by Type: All") {
@@ -845,12 +840,9 @@ server <- function(input, output, session) {
           distinct(name, .keep_all = TRUE)
       } else if (!str_detect(input$infras_category, ":")) {
         
-        # 🚨 NEW: Handle standalone categories without colons (e.g., "Library Branches")
         overlay_civic_infras %>% filter(category == input$infras_category)
         
       } else {
-        # Catch overlapping subsets (e.g., "Middle" captures "Elementary & Middle")
-        # Extract prefix (e.g., "Schools by Type: ") and term (e.g., "Middle")
         prefix_group <- str_extract(input$infras_category, "^[^:]+:\\s*")
         search_term  <- str_remove(input$infras_category, "^.*:\\s*")
         
@@ -893,7 +885,6 @@ server <- function(input, output, session) {
           )
       }
       
-      # Dynamic Legend Controller
       unique_categories <- unique(selected_infras$category)
       
       if (length(unique_categories) > 1) {
@@ -930,7 +921,7 @@ server <- function(input, output, session) {
       }
     }
     
-    # 3. Handle Region Boundary Layer
+    ###Draw Regional Boundaries----
     if (isTRUE(input$active_region)) {
       selected_region <- overlay_region %>%
         filter(category == input$region_category, refine == input$overlay_refine)
@@ -955,7 +946,7 @@ server <- function(input, output, session) {
                       redraw_overlays("mapB")
                     })
   
-  # ── choropleth update ─────────────────────────────────────────────────
+  ##*Update Choropleth----
   update_map <- function(map_id, base_variable, metric_type, selected_year) {
     req(base_variable, metric_type, selected_year)
     
@@ -1039,7 +1030,7 @@ server <- function(input, output, session) {
     update_map("mapB", input$B_variable, input$B_metric_type, input$B_year)
   })
   
-  # ── base map ──────────────────────────────────────────────────────────
+##*Base Map----
   base_map <- function() {
     leaflet(options = leafletOptions(maxZoom = 16)) %>%
       addProviderTiles("Esri.WorldGrayCanvas",
@@ -1054,15 +1045,13 @@ server <- function(input, output, session) {
   output$mapA <- renderLeaflet(base_map())
   output$mapB <- renderLeaflet(base_map())
   
-  # ── sync map positions ────────────────────────────────────────────────
-  # ── sync map positions (Defensive Production Build) ─────────────────
+##*Sync Map Position----
   observeEvent(input$mapA_bounds, {
     if (sync_frozen()) return()
     if (isFALSE(input$sync_move)) return()
     if (sync_source() == "REPO") { sync_source("none"); return() }
     if (sync_source() == "B") return()
     
-    # Block rapid-fire micro-movements from queueing up over the web
     if (check_throttle()) return()
     
     sync_source("A")
@@ -1070,7 +1059,6 @@ server <- function(input, output, session) {
       setView(input$mapA_center$lng, input$mapA_center$lat, input$mapA_zoom,
               options = list(animate = FALSE))
     
-    # Give the web socket an extra millisecond to breathe before clearing flags
     later::later(function() { sync_source("none") }, delay = 0.05)
   })
   
@@ -1090,7 +1078,7 @@ server <- function(input, output, session) {
     later::later(function() { sync_source("none") }, delay = 0.05)
   })
   
-  # ── auto-reposition ───────────────────────────────────────────────────
+##*Region Auto Reposition----
   observeEvent(list(input$overlay_refine, input$repo, input$active_region), {
     req(isTRUE(input$active_region), isTRUE(input$repo), input$overlay_refine)
     selected_region <- overlay_region %>%
@@ -1105,5 +1093,6 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 
+#things to add
 #download png of graph
 #download processed dataset
