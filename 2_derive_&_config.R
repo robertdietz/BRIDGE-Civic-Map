@@ -3,11 +3,10 @@ library(sf)
 library(tools)
 library(readxl)
 library(rmapshaper)
-#robert
-#paste(names(summary_ACS_Labor), collapse = ";")
 
-#GEO x SUMMARY-------------
-##import--------------
+#______________________--------------------
+#IMPORT & JOIN DATA-----------------
+##*import--------------
 summary_config <- read_excel("2_summary_config.xlsx")
 
 geo_names <- unique(summary_config$geometry)
@@ -28,7 +27,7 @@ geom_groups <- summary_config %>%
   group_by(geometry) %>%
   summarise(summaries = list(summary_name), .groups = "drop")
 
-##attach summary to geom-----------
+##*join summary data by shared geom-----------
 for (i in seq_len(nrow(geom_groups))) {
   geometry          <- geom_groups$geometry[[i]]
   app_summary_names <- geom_groups$summaries[[i]]
@@ -49,10 +48,11 @@ for (i in seq_len(nrow(geom_groups))) {
   assign(geometry, geom_no_area, envir = .GlobalEnv)
 }
 
+#______________________--------------------
 #VAR CONFIG / DERIVE---------------
-##create var_config--------
 var_config <- data.frame()
 
+#add data to var_config df based on summary_config.xlsx
 for (i in summary_config$summary_name) {
   df              <- get(i)
   formatter       <- summary_config$formatter[summary_config$summary_name == i]
@@ -89,7 +89,7 @@ var_config <- var_config %>%
     palette   = NA
   )
 
-##parse derived/included cols----------
+##*parse derived/included cols----------
 for (k in 1:5) {
   derived_col  <- paste0("derived_col_",  k)
   included_col <- paste0("included_cols_", k)
@@ -97,7 +97,6 @@ for (k in 1:5) {
   summary_config[[included_col]] <- strsplit(as.character(summary_config[[included_col]]), ";")
 }
 
-##derive functions-----------------
 derive_metric <- function(j, i, var_config, included, summary_category, 
                           prefix, metric_type, formatter, 
                           divisor_col, multiplier, suppression_col, suppression_val) {
@@ -112,7 +111,7 @@ derive_metric <- function(j, i, var_config, included, summary_category,
   app_df_name <- gsub("geo_", "app_", summary_config$geometry[summary_config$summary_name == i])
   geo_df_name <- summary_config$geometry[summary_config$summary_name == i]
   
-  # 1. Update var_config
+  #update var_config for newly added var
   var_config <- var_config %>%
     add_row(
       var             = new_var,
@@ -127,34 +126,31 @@ derive_metric <- function(j, i, var_config, included, summary_category,
       formatter       = formatter
     )
   
-  # 2. Extract and manipulate the target dataframe
   df_to_manipulate <- get(app_df_name)
   
-  # Safety checks
+  #safety checks
   if (!j %in% names(df_to_manipulate) || 
       length(df_to_manipulate[[j]]) == 0 || 
       !is.numeric(df_to_manipulate[[j]])) {
     return(var_config)
   }
   
-  # 3. Calculate the new metric
+  #calculate the new metric
   print(paste0("calculating: ", new_var))
   print(paste0("divisor_col: ", divisor_col, " | nrow: ", nrow(df_to_manipulate)))
   print(paste0("divisor exists: ", divisor_col %in% names(df_to_manipulate)))
   print(paste0("j length: ", length(df_to_manipulate[[j]])))
   df_to_manipulate[[new_var]] <- (df_to_manipulate[[j]] / df_to_manipulate[[divisor_col]]) * multiplier
   
-  # 4. Apply NA and Suppressions
   df_to_manipulate[[new_var]][!is.finite(df_to_manipulate[[new_var]])] <- NA
   df_to_manipulate[[new_var]][df_to_manipulate[[suppression_col]] < suppression_val] <- NA
   
-  # 5. Push changes back to global environment
   assign(app_df_name, df_to_manipulate, envir = .GlobalEnv)
   
   return(var_config)
 }
 
-## apply derive functions------------
+##*apply derive functions------------
 for (i in summary_names) {
   summary_category       <- gsub("_", " ", gsub("summary_", "", i))
   filtered_df            <- var_config %>% filter(category == summary_category)
@@ -170,6 +166,8 @@ for (i in summary_names) {
     included <- current_summary_config[[included_col_k]][[1]]
     
     for (j in filtered_vars) {
+  #custom derived functions are below. If you want to add a custom derived function, just copy and paste
+  #an earlier row and append it to the end of the list
       if ("pcent_pop_" %in% derived) {
         var_config <- derive_metric(j, i, var_config, included, summary_category,
                                     prefix = "pcent_pop_", metric_type = "% of Pop", formatter = "percent",
@@ -252,7 +250,7 @@ for (i in summary_names) {
   }
 }
 
-##pal min/max vals----------
+##*pal min/max vals----------
 ceiling_max <- function(x) {
   x <- as.numeric(x)
   ifelse(x < 5, 5,
@@ -280,7 +278,9 @@ for (i in seq_along(var_config$var)) {
   }
 }
 
-##list active years------------
+##*list active years------------
+#this is the list of years the user will be able to select, and is based on all years 
+#that have any data other than NA
 var_config$years <- as.list(rep(NA, nrow(var_config)))
 
 geoms <- as.character(geom_groups$geometry)
@@ -301,7 +301,7 @@ for (i in geoms) {
   }
 }
 
-##set labels----------------------
+##*set labels----------------------
 var_config$label <- gsub("_", " ", var_config$base_var)
 var_config$label <- toTitleCase(tolower(var_config$label))
 var_config$label <- gsub("..hyphen..",       "-", var_config$label)
@@ -320,9 +320,9 @@ var_config$label[var_config$var == "Representative_Three_Bedroom"] <- "Represent
 var_config$label[var_config$var == "Representative_Four_Bedroom"]  <- "Representative 4 Bedroom"
 var_config$label[var_config$var == "Representative_Five_Bedroom"]  <- "Representative 5 Bedroom"
 
-##set palette---------
 var_config$palette <- "Blues"
 
+#______________________--------------------
 #MANUAL OVERRIDES------------
 rows <- which(grepl("Late or No Prenatal Care", var_config$label) & var_config$category == "Vital Statistics Natality")
 var_config$label[rows]    <- "Late or No Prenatal Care"
@@ -359,9 +359,12 @@ rows <- which((var_config$var == "median_earnings" |
 var_config$formatter[rows]    <- "dollar"
 var_config$metric_type[rows]  <- "Dollar Value"
 
+#______________________--------------------
+#SIMPLIFY GEOMS----------------
 geo_census_tract <- ms_simplify(geo_census_tract, keep = 0.3, keep_shapes = TRUE)
 geo_zip_code     <- ms_simplify(geo_zip_code,     keep = 0.5, keep_shapes = TRUE)
 
+#______________________--------------------
 #EXPORT-----------------
 for (i in geo_names) {
   app_name <- gsub("geo_", "app_", i)

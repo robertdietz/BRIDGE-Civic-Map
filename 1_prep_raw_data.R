@@ -12,8 +12,26 @@ year_less_0 <- as.numeric(format(Sys.Date(), "%Y"))
 year_less_1 <- as.numeric(format(Sys.Date(), "%Y"))-1
 year_less_2 <- as.numeric(format(Sys.Date(), "%Y"))-2
 
-#GEO_CENSUS_TRACT______-----------------------
-##*base geo-------------------------
+#function to remove spaces from column titles because they will convert to 
+#periods on import into the app, and this can lead to a mismatch between summary 
+#data and var_config
+make_safe_cols <- function(df){
+  names(df) <- gsub(" ", "_", names(df)) 
+  names(df) <- gsub("-", "..hyphen..", names(df), fixed = TRUE) 
+  names(df) <- gsub("/", "..fslash..", names(df), fixed = TRUE) 
+  names(df) <- gsub("(", "..oparen..", names(df), fixed = TRUE) 
+  names(df) <- gsub(")", "..cparen..", names(df), fixed = TRUE) 
+  names(df) <- gsub("+", "..plus..", names(df), fixed = TRUE) 
+  names(df) <- gsub("<", "..lessthan..", names(df), fixed = TRUE) 
+  names(df) <- gsub(">", "..greaterthan..", names(df), fixed = TRUE) 
+  names(df) <- gsub("%", "..pcent..", names(df), fixed = TRUE) 
+  names(df) <- gsub(":", "..colon..", names(df), fixed = TRUE) 
+  return(df)
+}
+
+#______________________----
+#GEO_CENSUS_TRACT----
+##*base geo----
 #PA tracts
 tract_v10_pa <- get_acs(
   geography = "tract",
@@ -90,7 +108,7 @@ tract_v20_md <- get_acs(
   geometry = TRUE
 )
 
-###combine/process ------------------------------------------------------
+###combine/process----
 tract_v10 <- bind_rows(tract_v10_pa, tract_v10_nj, tract_v10_de, tract_v10_md)
 tract_v20 <- bind_rows(tract_v20_pa, tract_v20_nj, tract_v20_de, tract_v20_md)
 
@@ -117,7 +135,7 @@ st_write(geo_tract, "2_summary_data/geo_census_tract.geojson",  delete_dsn = TRU
 
 
 
-##*ACS Data-------------------------
+##*ACS Data----
 #years that you want to query ACS data for
 years <- 2010:year_less_2
 
@@ -300,7 +318,6 @@ years_mapping <- availability_report %>%
 var_dict<- var_dict %>%
   left_join(years_mapping, by = "acs_var")
 
-#query data
 fetch_acs_year <- function(year, region_df, var_dict) {
   
   # Filter for variables available in that year
@@ -404,7 +421,7 @@ saveRDS(summary_acs_housing,   "2_summary_data/summary_ACS_Housing.rds")
 
 
 
-##*Eviction Lab----------------
+##*Eviction Lab----
 evict_phl  <- read.csv("1_raw_data/philadelphia_monthly_2020_2021.csv")
 evict_wilm <- read.csv("1_raw_data/wilmington_monthly_2020_2021.csv")
 
@@ -427,7 +444,7 @@ summary_evict_v20 <- summary_evict_v20 %>% select(-GEOID)
 
 saveRDS(summary_evict_v20, "2_summary_data/summary_Eviction_Lab.rds")
 
-##*PPD Crime Incidents----------------
+##*PPD Crime Incidents----
 url <- "https://phl.carto.com/api/v2/sql"
 
 fetch_year <- function(year) {
@@ -558,28 +575,14 @@ summary_crime_v20$Part_1_Property <- summary_crime_v20$Arson +
                           summary_crime_v20$`Theft from Vehicle` +
                           summary_crime_v20$Thefts
 
-names(summary_crime_v10) <- gsub(" ", "_", names(summary_crime_v10)) #spaces are removed from column titles because they will convert to periods on import into the app, and this leads to a mismatch between export_tract and var_config
-names(summary_crime_v20) <- gsub(" ", "_", names(summary_crime_v20))
-
-names(summary_crime_v10) <- gsub("-", "..hyphen..", names(summary_crime_v10)) 
-names(summary_crime_v20) <- gsub("-", "..hyphen..", names(summary_crime_v20))
-
-names(summary_crime_v10) <- gsub("/", "..fslash..", names(summary_crime_v10)) 
-names(summary_crime_v20) <- gsub("/", "..fslash..", names(summary_crime_v20))
-
-names(summary_crime_v10) <- gsub("(", "..oparen..", names(summary_crime_v10), fixed = TRUE) 
-names(summary_crime_v20) <- gsub("(", "..oparen..", names(summary_crime_v20), fixed = TRUE)
-
-names(summary_crime_v10) <- gsub(")", "..cparen..", names(summary_crime_v10), fixed = TRUE) 
-names(summary_crime_v20) <- gsub(")", "..cparen..", names(summary_crime_v20), fixed = TRUE)
+summary_crime_v10 <-make_safe_cols(summary_crime_v10)
+summary_crime_v20 <-make_safe_cols(summary_crime_v20)
 
 summary_crime <- bind_rows(summary_crime_v10, summary_crime_v20)
 
 saveRDS(summary_crime, "2_summary_data/summary_PPD_Crime_Incidents.rds")
 
-##*PPD Fatal Crashes----------------
-url <- "https://phl.carto.com/api/v2/sql"
-
+##*PPD Fatal Crashes----
 sql_query <- paste0(
   "SELECT the_geom, year, date_, hit_____ru ", 
   "FROM fatal_crashes ",
@@ -633,16 +636,15 @@ summary_crashes <- function(data) {
     )
 }
 
-summary_crashes_v10 <- summary_crashes(crashes_v10)
-summary_crashes_v20 <- summary_crashes(crashes_v20)
-
-ppd_fatal_crash_reports_pre<- bind_rows(summary_crashes_v10, summary_crashes_v20)
+ppd_fatal_crash_reports_pre<- bind_rows(crashes_v10, scrashes_v20)
 
 phl_geo <- geo_tract %>% filter (county == 101)
 
 all_tracts <- unique(phl_geo$region_id)
 all_years  <- unique(ppd_fatal_crash_reports_pre$year)
 
+#master grid necessary to allow regions that had to crashes to appear as having no crashes, instead
+#of just not being a part of the data
 master_grid <- expand_grid(region_id = all_tracts, year = all_years)
 
 master_grid <- master_grid %>%
@@ -660,7 +662,7 @@ summary_ppd_fatal_crash_reports <- master_grid %>%
 
 saveRDS(summary_ppd_fatal_crash_reports, "2_summary_data/summary_PPD_Fatal_Crash_Reports.rds")
 
-##*Properties----------------
+##*Properties----
 # 
 # prop <- st_read("1_raw_data/opa_properties_public.geojson")
 # 
@@ -688,10 +690,11 @@ saveRDS(summary_ppd_fatal_crash_reports, "2_summary_data/summary_PPD_Fatal_Crash
 # summary_prop_v20 <- summary_prop_v20 %>% select(-'NA')
 # 
 # saveRDS(summary_prop_v20,  "2_summary_data/summary_Philadelphia_Properties.rds")
-# 
+#
 
-#GEO_ZIP_CODE___________-----------------------
-##*base geo-------------------------
+#______________________----
+#GEO_ZIP_CODE----
+##*base geo----
 
 #clear global enviroment and reclaim memory
 rm(list = ls())
@@ -709,8 +712,7 @@ geo_zip <- geo_zip %>%
 
 geo_zip <- geo_zip %>% select("region_id", "geometry")
 
-##*Zillow Home Value Index--------------
-
+##*Zillow Home Value Index----
 zillow_fun <- function(df, bedrooms) {
   df_name <- deparse(substitute(df))
   
@@ -777,8 +779,6 @@ zillow_fun(z_bdrs_3, "Representative_Three_Bedroom")
 zillow_fun(z_bdrs_4, "Representative_Four_Bedroom")
 zillow_fun(z_bdrs_5, "Representative_Five_Bedroom")
 
-
-####Join 1 2 # 3 bdrs-------
 summary_zillow <- z_bdrs_1_summary %>%
   full_join(z_bdrs_2_summary, by = c("region_id", "year")) %>%
   full_join(z_bdrs_3_summary, by = c("region_id", "year")) %>%
@@ -786,7 +786,7 @@ summary_zillow <- z_bdrs_1_summary %>%
   full_join(z_bdrs_5_summary, by = c("region_id", "year")) %>%
   filter(year<year_less_0)
 
-####Remove Unutilized Geoms
+#Remove Unutilized Geoms
 geo_zip$in_data <- ifelse(geo_zip$region_id %in% unique(summary_zillow$region_id),1,0)
 
 geo_zip <- geo_zip %>% filter(in_data == 1) %>%
@@ -800,11 +800,9 @@ geo_zip$area <- as.numeric(st_area(geo_zip$geometry))*0.000000386102
 saveRDS(summary_zillow,"2_summary_data/summary_Zillow_Home_Value_Index.rds")
 st_write(geo_zip,   "2_summary_data/geo_zip_code.geojson",  delete_dsn = TRUE)
 
-
-
-
-#GEO_DISTRICT____________----------------------
-##*base geo------------
+#______________________----
+#GEO_DISTRICT----
+##*base geo----
 
 #clear global enviroment and reclaim memory
 rm(list = ls())
@@ -834,8 +832,7 @@ geo_district$area <- as.numeric(st_area(geo_district$geometry ))*0.000000386102
 
 st_write(geo_district,   "2_summary_data/geo_district.geojson",  delete_dsn = TRUE)
 
-##*Natality--------------
-
+##*Natality----
 natality <- natality %>% filter(SEX == "All sexes")
 
 

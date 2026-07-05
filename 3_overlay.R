@@ -6,8 +6,8 @@ library(censusapi)
 library(tidycensus)
 
 options(tigris_use_cache = TRUE)
-
-#OUTLINE REGION BORDERS-----------------
+#______________________--------------------
+#REGION BORDERS-----------------
 ###RCOs-------------
 rco_outline       <- st_read("3_overlay_data/rco_summary.geojson")
 rco_outline       <- rco_outline %>% rename(refine = region_name)
@@ -97,9 +97,11 @@ region_outline    <- bind_rows(rco_outline, council_outline, neighb_outline, cou
 
 region_outline    <- region_outline %>% select(category, refine, geometry)
 
+###Export---------------
 saveRDS(region_outline,  "4_app/overlay_region.rds")
 
-#OUTLINE CIVIC INFRASTRUCTURE--------------
+#______________________--------------------
+#CIVIC INFRASTRUCTURE--------------
 ###Rail-------------
 trolley_outline   <- st_read("3_overlay_data/Trolley_Lines.geojson")
 trolley_outline$category <- "Rail: Trolley"
@@ -142,6 +144,8 @@ point_library$color <- "#00990d"
 point_library <- point_library %>% rename(name = building)
 
 ###Schools-------------
+#school data is more complicated, because it needs to break down by type and grade_level,
+#and some schools must be displayed across multiple categories.
 point_school <- st_read("3_overlay_data/Schools.geojson")
 
 unique(point_school$type_specific)
@@ -162,7 +166,6 @@ point_school$size <- ifelse(is.na(point_school$enrollment),1,point_school$size)
 
 point_school$school_name_label <- toTitleCase(tolower(point_school$school_name_label))
 point_school <- point_school %>% rename(name = school_name_label)
-# point_school$size <- paste0(point_school$grade_org, ", ", point_school$enrollment, ", ", point_school$type_specific)
 point_school$size <- paste0("<b>Grade Level: </b>", point_school$grade_org, "<br><b>Type: </b>", str_to_title(point_school$type_specific))
 
 point_school_type <- point_school
@@ -203,6 +206,7 @@ point_school_grade <- point_school_grade %>%
 
 civic_infras <- bind_rows(transit_outline, point_library, point_school_type, point_school_grade)
 
+#this is necessary to ensure correct ordering in app
 civic_infras <- civic_infras %>%
 mutate(category = factor(category, levels = c(
   "Schools by Grade: Elementary",
@@ -223,73 +227,5 @@ mutate(category = factor(category, levels = c(
 ))) %>%
   mutate(color = fct_reorder(factor(color), as.numeric(category)))
 
+###Export--------------------
 saveRDS(civic_infras,  "4_app/overlay_civic_infras.rds",)
-
-
-
-
-class(civic_infras$category)
-
-
-#graphic
-# 
-# w_philly <- rco_outline %>% 
-#   filter(grepl("West Phil", refine))
-# unique(w_philly$refine)
-# 
-# w_philly$color <- "red"
-# 
-# w_philly$color <- ifelse(w_philly$refine == "West Philly Plan + Preserve", "Purple",
-#                   ifelse(w_philly$refine == "West Philadelphia Economic Development Council", "Orange",
-#                   ifelse(w_philly$refine == "West Philly Together", "Green",
-#                   ifelse(w_philly$refine == "West Philly United Neighbors", "Red",
-#                   ifelse(w_philly$refine == "West Philadelphia Community Development Corporation", "Blue", "NA"))))
-#                          )
-# 
-# 
-# w_philly <- w_philly %>%
-#   arrange(match(refine, c(
-#     "West Philadelphia Community Development Corporation",  
-#     "West Philly Together",
-#     "West Philadelphia Economic Development Council",
-#     "West Philly United Neighbors",
-#     "West Philly Plan + Preserve"                          
-#   )))
-# 
-# 
-# 
-# my_map <- leaflet(w_philly) %>%
-#   addProviderTiles("CartoDB.Positron") %>%
-#   addPolygons(
-#     stroke = TRUE,
-#     smoothFactor = 0.2,
-#     fillColor = ~color,
-#     color = ~color,
-#     fillOpacity = .3,
-#     weight = 1
-#   ) %>%
-#   addPolygons(
-#     stroke = TRUE,
-#     smoothFactor = 0.2,
-#     fillColor = NA,
-#     color = ~color,
-#     opacity = 1,
-#     fillOpacity = 0,
-#     weight = 5
-#   )
-# 
-# 
-# library(htmlwidgets)
-# library(webshot2)
-# 
-# # Save map as HTML first
-# saveWidget(my_map, "map.html", selfcontained = TRUE)
-# 
-# # Then export to image
-# webshot2::webshot(
-#   "map.html", 
-#   "map.png",
-#   vwidth  = 3000,   # viewport width in pixels
-#   vheight = 2000,   # viewport height in pixels
-#   zoom    = 1      # pixel density multiplier — zoom = 3 gives you 5760 x 3240
-# )
