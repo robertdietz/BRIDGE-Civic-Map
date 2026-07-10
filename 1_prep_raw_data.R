@@ -440,7 +440,10 @@ summary_evict_v20$year <- as.numeric(summary_evict_v20$year)
 
 summary_evict_v20$region_id <- paste0("v20|", summary_evict_v20$GEOID)
 
-summary_evict_v20 <- summary_evict_v20 %>% select(-GEOID)
+summary_evict_v20 <- summary_evict_v20 %>% 
+  select(-GEOID) %>%
+  filter(region_id != "v20|sealed")
+
 
 saveRDS(summary_evict_v20, "2_summary_data/summary_Eviction_Lab.rds")
 

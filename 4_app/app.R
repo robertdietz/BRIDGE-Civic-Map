@@ -713,6 +713,51 @@ server <- function(input, output, session) {
   }
   
 ##*Metadata Popup----
+  output$downloadDataA <- downloadHandler(
+    filename = function() {
+      # Clean the category name for a safe file name (e.g., "Housing & Transit" -> "Housing___Transit")
+      clean_cat <- gsub("[^A-Za-z0-9]", "_", input$A_category)
+      paste0("dataset_", clean_cat, ".csv")
+    },
+    content = function(file) {
+      # 1. Filter config for the entire category
+      info <- var_config[var_config$category == input$A_category, ]
+      req(nrow(info) > 0)
+      
+      # 2. Extract the unique dataset name(s) associated with this category
+      var_data_names <- unique(gsub("geo_", "app_", info$geo_df))
+      
+      # 3. Use get() to fetch the actual dataframe objects from the environment
+      data_list <- lapply(var_data_names, get)
+      
+      # 4. If a category spans multiple datasets, join them together. 
+      # (If it's just one dataset, reduce() just returns that single dataset)
+      full_data <- purrr::reduce(data_list, full_join, by = c("region_id", "year"))
+      
+      # 5. Write the unfiltered, complete dataset to CSV
+      write.csv(full_data, file, row.names = FALSE)
+    }
+  )
+  
+  output$downloadDataB <- downloadHandler(
+    filename = function() {
+      clean_cat <- gsub("[^A-Za-z0-9]", "_", input$B_category)
+      paste0("dataset_", clean_cat, ".csv")
+    },
+    content = function(file) {
+      info <- var_config[var_config$category == input$B_category, ]
+      req(nrow(info) > 0)
+      
+      var_data_names <- unique(gsub("geo_", "app_", info$geo_df))
+      
+      data_list <- lapply(var_data_names, get)
+      
+      full_data <- purrr::reduce(data_list, full_join, by = c("region_id", "year"))
+      
+      write.csv(full_data, file, row.names = FALSE)
+    }
+  )
+  
   observeEvent(input$open_modal_a, {
     info <- var_config[var_config$base_var == input$A_variable &
                          var_config$metric_type == input$A_metric_type, ]
@@ -721,8 +766,9 @@ server <- function(input, output, session) {
       title     = h3(strong(info$category)),
       if (!is.na(info$geo_df))       p(strong("Base Geometry: "),  format_geo_label(info$geo_df)),
       if (!is.na(info$last_updated)) p(strong("Last Updated: "),   info$last_updated),
-      if (!is.na(info$description))  p(strong("Description: "),    info$description),
-      if (!is.na(info$url))          a("Link to Source", href = info$url, target = "_blank"),
+      if (!is.na(info$description))  div(strong("Description: "),  info$description),br(),
+      if (!is.na(info$url))          a("Link to Original Source", href = info$url, target = "_blank"),br(),br(),
+      downloadLink("downloadDataA", "Download Processed Data"),
       size      = "m",
       easyClose = TRUE,
       fade      = FALSE,
@@ -738,8 +784,9 @@ server <- function(input, output, session) {
       title     = h3(strong(info$category)),
       if (!is.na(info$geo_df))       p(strong("Base Geometry: "),  format_geo_label(info$geo_df)),
       if (!is.na(info$last_updated)) p(strong("Last Updated: "),   info$last_updated),
-      if (!is.na(info$description))  p(strong("Description: "),    info$description),
-      if (!is.na(info$url))          a("Link to Source", href = info$url, target = "_blank"),
+      if (!is.na(info$description))  div(strong("Description: "),  info$description),br(),
+      if (!is.na(info$url))          a("Link to Original Source", href = info$url, target = "_blank"),br(),br(),
+      downloadLink("downloadDataB", "Download Processed Data"),
       size      = "m",
       easyClose = TRUE,
       fade      = FALSE,
@@ -1091,8 +1138,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
-
-
-#things to add
-#download png of graph
-#download processed dataset
