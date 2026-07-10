@@ -249,8 +249,8 @@ var_dict <- tribble(
   "total_civilian_pop_16..plus..",              "B23025_001E",         "labor",
   "in_labor_force..colon.._yes",                "B23025_002E",         "labor",
   "in_labor_force..colon.._no",                 "B23025_007E",         "labor",
-  "employed..colon.._yes",                      "B23025_005E",         "labor",
-  "employed..colon.._no",                       "B23025_004E",         "labor",
+  "employed..colon.._no",                       "B23025_005E",         "labor",
+  "employed..colon.._yes",                      "B23025_004E",         "labor",
   "median_earnings",                            "B20004_001E",         "labor",
   
 #______________________________________________________________________________________
