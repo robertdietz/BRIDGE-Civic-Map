@@ -76,7 +76,7 @@ ui <- fluidPage(
       rel  = "stylesheet",
       href = "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
     ),
-##*HTML Style Tags----
+    ##*HTML Style Tags----
     tags$style(HTML("
 /* === Base layout === */
       html, body {
@@ -341,7 +341,7 @@ ui <- fluidPage(
   }
 }
     ")),
-##*HTML Script Tags---- 
+    ##*HTML Script Tags---- 
     tags$script(HTML("
       /* ── Floating Label State Tracking Logic ────────────────────────── */
       function updateSelectLabels() {
@@ -570,7 +570,7 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
     "))
   ),
   
-##*Header Row 1----
+  ##*Header Row 1----
   div(id = "app-header",
       div(style = "width: 100%; border-bottom: 1px solid #ccc;",
           div(style = "max-width: 1400px; margin: 0 auto;",
@@ -614,9 +614,9 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
                   style = "flex:2 1 270px; min-width:160px; max-width:400px;opacity: 0.4; pointer-events: none;",
                   selectInput("overlay_refine", "Region Refine", choices = c(""), width = "100%")
                 ),
-
+                
                 div(style = "width: 1px; border-left: 1px solid #ccc; margin: 0 6px; align-self: stretch;"),
-
+                
                 div(
                   class = "header-cell",
                   style = "flex:1 1 120px; min-width:120px; max-width:120px; ",
@@ -630,10 +630,10 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
                 ))
           )),
       
-##*Header Row 2----
+      ##*Header Row 2----
       div(
         style = "display:flex; border-bottom:1px solid #ccc;",
-  
+        
         div(
           id    = "mapA-controls",
           class = "input-block",
@@ -660,7 +660,7 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
       )
   ),
   
-##*Choropleths----
+  ##*Choropleths----
   div(
     style = "display:flex; margin:0; flex:1; width:100%;",
     div(id = "mapA-col",
@@ -676,9 +676,9 @@ selectizeObserver.observe(document.body, { childList: true, subtree: true });
 #SERVER----
 server <- function(input, output, session) {
   
-##*Throttle Guard--------------------------
-#Stops the map updates from looping rapidly back and forth between A and B when
-#syncing map position
+  ##*Throttle Guard--------------------------
+  #Stops the map updates from looping rapidly back and forth between A and B when
+  #syncing map position
   move_times  <- reactiveVal(numeric(0))
   sync_frozen <- reactiveVal(FALSE)
   
@@ -701,7 +701,7 @@ server <- function(input, output, session) {
   
   sync_source <- reactiveVal("none")
   
-##*helper functions----
+  ##*helper functions----
   format_geo_label <- function(x) {
     x <- gsub("^geo_", "", x)
     x <- gsub("_",     " ", x)
@@ -712,7 +712,7 @@ server <- function(input, output, session) {
     session$sendCustomMessage("attachCircleHover", list(map = map_id))
   }
   
-##*Metadata Popup----
+  ##*Metadata Popup----
   output$downloadDataA <- downloadHandler(
     filename = function() {
       # Clean the category name for a safe file name (e.g., "Housing & Transit" -> "Housing___Transit")
@@ -794,7 +794,7 @@ server <- function(input, output, session) {
     ))
   })
   
-##*Region Input Options----
+  ##*Region Input Options----
   update_refine_choices <- function() {
     req(input$region_category)
     updateSelectInput(session, "overlay_refine",
@@ -806,7 +806,7 @@ server <- function(input, output, session) {
   }
   observeEvent(input$region_category, update_refine_choices())
   
-##*Map User Input Options----
+  ##*Map User Input Options----
   update_variable_choices <- function(side) {
     cat_input   <- paste0(side, "_category")
     var_input   <- paste0(side, "_variable")
@@ -846,7 +846,7 @@ server <- function(input, output, session) {
   observeEvent(input$B_category,  update_type_choices("B"))
   observeEvent(input$A_variable,  update_type_choices("A"))
   observeEvent(input$B_variable,  update_type_choices("B"))
-
+  
   update_year_choices <- function(side) {
     var_input  <- paste0(side, "_variable")
     type_input <- paste0(side, "_metric_type")
@@ -863,7 +863,7 @@ server <- function(input, output, session) {
   observeEvent(input$B_variable,    update_year_choices("B"))
   observeEvent(input$B_metric_type, update_year_choices("B"))
   
-##*Update Overlays----
+  ##*Update Overlays----
   redraw_overlays <- function(map_id) {
     proxy <- leafletProxy(map_id)
     
@@ -872,9 +872,9 @@ server <- function(input, output, session) {
       clearGroup("INFRAS") %>% 
       removeControl("infras_legend")
     
-###Draw Civic Infrastructure----
+    ###Draw Civic Infrastructure----
     if (isTRUE(input$active_infras)) {
-
+      
       selected_infras <- if (input$infras_category == "Rail: All") {
         overlay_civic_infras %>% filter(str_detect(category, "^Rail:"))
       } else if (input$infras_category == "Schools by Type: All") {
@@ -899,8 +899,8 @@ server <- function(input, output, session) {
               str_detect(category, fixed(search_term))
           )
       }
-        
-        overlay_civic_infras %>% filter(category == input$infras_category)
+      
+      overlay_civic_infras %>% filter(category == input$infras_category)
       
       # Map Geometry Routing
       geom_types <- unique(sf::st_geometry_type(selected_infras))
@@ -915,7 +915,10 @@ server <- function(input, output, session) {
             weight      = 0,
             radius      = 9,
             options     = pathOptions(interactive = TRUE),
-            popup       = ~paste0("<b>Name: </b>", name, "<br>", size),
+            popup       = ~paste0(
+              "<b>Name: </b>", name,
+              ifelse(!is.na(size) & size != "", paste0("<br>", size), "")
+            ),
             popupOptions = popupOptions(autoClose = TRUE, closeOnClick = TRUE, closeOnMove = FALSE)
           )
         trigger_hover_bind(map_id)
@@ -985,7 +988,7 @@ server <- function(input, output, session) {
         )
     }
   }
-
+  
   observeEvent(list(input$active_region, input$active_infras,
                     input$region_category, input$overlay_refine,
                     input$infras_category), {
@@ -1077,7 +1080,7 @@ server <- function(input, output, session) {
     update_map("mapB", input$B_variable, input$B_metric_type, input$B_year)
   })
   
-##*Base Map----
+  ##*Base Map----
   base_map <- function() {
     leaflet(options = leafletOptions(maxZoom = 16)) %>%
       addProviderTiles("Esri.WorldGrayCanvas",
@@ -1092,7 +1095,7 @@ server <- function(input, output, session) {
   output$mapA <- renderLeaflet(base_map())
   output$mapB <- renderLeaflet(base_map())
   
-##*Sync Map Position----
+  ##*Sync Map Position----
   observeEvent(input$mapA_bounds, {
     if (sync_frozen()) return()
     if (isFALSE(input$sync_move)) return()
@@ -1125,7 +1128,7 @@ server <- function(input, output, session) {
     later::later(function() { sync_source("none") }, delay = 0.05)
   })
   
-##*Region Auto Reposition----
+  ##*Region Auto Reposition----
   observeEvent(list(input$overlay_refine, input$repo, input$active_region), {
     req(isTRUE(input$active_region), isTRUE(input$repo), input$overlay_refine)
     selected_region <- overlay_region %>%
@@ -1138,3 +1141,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
