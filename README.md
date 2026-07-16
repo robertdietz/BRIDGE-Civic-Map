@@ -24,7 +24,7 @@ Brings raw data into R environment and standardizes it. This script builds struc
 ### `4_app.R`
 Generates user interface and runs Shiny app.
 
-## How to Add New Data Set
+## How to Add / Update Data Sets
 see technical documentation in the below Google Drive folder.
 
 ## External Info
