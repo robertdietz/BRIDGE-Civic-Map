@@ -1136,7 +1136,9 @@ server <- function(input, output, session) {
     bounds <- st_bbox(selected_region)
     sync_source("REPO")
     leafletProxy("mapA") %>% fitBounds(bounds[[1]], bounds[[2]], bounds[[3]], bounds[[4]])
-    leafletProxy("mapB") %>% fitBounds(bounds[[1]], bounds[[2]], bounds[[3]], bounds[[4]])
+    if (isTRUE(input$map_compare)) {
+      leafletProxy("mapB") %>% fitBounds(bounds[[1]], bounds[[2]], bounds[[3]], bounds[[4]])
+    }
   })
 }
 
