@@ -639,7 +639,10 @@ summary_crashes <- function(data) {
     )
 }
 
-ppd_fatal_crash_reports_pre<- bind_rows(crashes_v10, scrashes_v20)
+ppd_fatal_crash_reports_pre <- bind_rows(
+  summary_crashes(crashes_v10), 
+  summary_crashes(crashes_v20)
+)
 
 phl_geo <- geo_tract %>% filter (county == 101)
 
